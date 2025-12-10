@@ -1,0 +1,608 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>MielnikCasino</title>
+<style>
+  :root{
+    --bg:#0f1113;
+    --card:#0f1720;
+    --accent:#d4af37;
+    --muted:#9aa4b2;
+    --glass: rgba(255,255,255,0.03);
+  }
+  html,body{height:100%;margin:0;font-family:Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial; background:
+    linear-gradient(180deg,#0b0d0f 0%, #0f1113 100%); color:#e6eef6;}
+  header{display:flex;align-items:center;gap:16px;padding:18px 24px;border-bottom:1px solid rgba(255,255,255,0.03)}
+  .logo{display:flex;align-items:center;gap:12px;font-weight:700;}
+  .badge{width:48px;height:48px;border-radius:8px;background:linear-gradient(180deg,#1b1f25, #0b0d0f);display:flex;align-items:center;justify-content:center;color:var(--accent);font-weight:900;font-size:20px;box-shadow:0 6px 18px rgba(0,0,0,0.6)}
+  .container{max-width:1100px;margin:22px auto;padding:0 16px}
+  .topbar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px}
+  .balance{background:var(--glass);padding:12px 16px;border-radius:10px;display:flex;gap:14px;align-items:center;border:1px solid rgba(255,255,255,0.03)}
+  .balance .num{font-size:20px;font-weight:700;color:var(--accent)}
+  main{display:grid;grid-template-columns:1fr 360px;gap:18px}
+  .card{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));border-radius:12px;padding:14px;border:1px solid rgba(255,255,255,0.03)}
+  h2{margin:0 0 10px 0;font-size:20px}
+  .games{display:flex;flex-direction:column;gap:14px}
+  .game-head{display:flex;align-items:center;gap:12px;justify-content:space-between;margin-bottom:8px}
+  .controls{display:flex;gap:8px;align-items:center}
+  input[type=number]{width:110px;padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.06);background:transparent;color:inherit}
+  button{background:var(--accent);border:none;padding:8px 12px;border-radius:8px;color:#0b0d0f;font-weight:700;cursor:pointer}
+  button.secondary{background:transparent;color:var(--muted);border:1px solid rgba(255,255,255,0.03)}
+  .log{height:120px;overflow:auto;padding:10px;border-radius:8px;background:rgba(0,0,0,0.25);font-size:14px;color:var(--muted)}
+  /* roulette */
+  .roulette-wrap{display:flex;gap:12px;align-items:center}
+  canvas#wheel{width:320px;height:320px;border-radius:50%;background:linear-gradient(180deg,#0a0b0c,#0d0f12);box-shadow:0 8px 36px rgba(0,0,0,0.6)}
+  .bettypes{display:flex;flex-direction:column;gap:6px}
+  .small{font-size:13px;color:var(--muted)}
+  /* plinko */
+  .dice-display{display:none} /* removed dice */
+  .plinko-board{background:linear-gradient(180deg,#071018,#0b1520);height:380px;border-radius:10px;position:relative;overflow:hidden}
+  .plinko-slot-row{position:absolute;bottom:8px;left:0;right:0;display:flex;justify-content:space-around;padding:0 30px}
+  .slot{width:40px;height:46px;background:rgba(255,255,255,0.03);border-radius:6px;display:flex;align-items:center;justify-content:center;font-weight:700}
+  .peg{width:8px;height:8px;background:rgba(255,255,255,0.12);border-radius:50%;position:absolute}
+  .ball{width:18px;height:18px;border-radius:50%;position:absolute;background:var(--accent);box-shadow:0 6px 14px rgba(0,0,0,0.55)}
+  footer{margin:28px 0;text-align:center;color:var(--muted);font-size:13px}
+  /* BIG WIN overlay */
+  .bigwin-overlay {
+    position:fixed;
+    inset:0;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    pointer-events:none;
+    z-index:9999;
+  }
+  .bigwin-card{
+    width:340px;
+    height:340px;
+    border-radius:20px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    transform-origin:center center;
+    background: radial-gradient(circle at 30% 20%, rgba(212,175,55,0.12), rgba(0,0,0,0.35));
+    backdrop-filter: blur(4px);
+    position:relative;
+    box-shadow:0 12px 40px rgba(0,0,0,0.6);
+    pointer-events:auto;
+  }
+  .bigwin-card img{
+    width:80%;
+    border-radius:14px;
+    border:6px solid rgba(212,175,55,0.85);
+    box-shadow:0 0 8px rgba(212,175,55,0.6), inset 0 0 18px rgba(255,240,200,0.12);
+  }
+  /* rotating ring (decorative) */
+  .gold-ring{
+    position:absolute;
+    width:420px;
+    height:420px;
+    border-radius:50%;
+    top:50%;
+    left:50%;
+    transform:translate(-50%,-50%);
+    pointer-events:none;
+    box-shadow: 0 0 40px rgba(212,175,55,0.25), inset 0 0 20px rgba(212,175,55,0.08);
+    border: 6px solid rgba(212,175,55,0.12);
+    animation: ringSpin 1.6s linear infinite;
+  }
+  @keyframes ringSpin {
+    from { transform:translate(-50%,-50%) rotate(0deg); }
+    to { transform:translate(-50%,-50%) rotate(360deg); }
+  }
+  @keyframes spinIn {
+    0% { transform: translate(-50%, -50%) scale(0) rotate(-360deg); opacity:0; }
+    60% { transform: translate(-50%, -50%) scale(1.08) rotate(20deg); opacity:1; }
+    100% { transform: translate(-50%, -50%) scale(1) rotate(0deg); opacity:1; }
+  }
+  @keyframes glowPulse {
+    0% { box-shadow: 0 0 6px rgba(212,175,55,0.6); }
+    100% { box-shadow: 0 0 30px rgba(212,175,55,0.95); }
+  }
+  .bigwin-show {
+    animation: spinIn 0.66s cubic-bezier(.2,.9,.2,1) forwards;
+  }
+  .bigwin-card img { animation: glowPulse 1.2s ease-in-out infinite alternate; }
+  /* small responsive */
+  @media(max-width:700px){
+    .bigwin-card{width:260px;height:260px;}
+    .gold-ring{width:320px;height:320px;}
+  }
+  @media(max-width:980px){
+    main{grid-template-columns:1fr; padding-bottom:40px}
+  }
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">
+    <div class="badge">
+      <img src="mielnik.png" alt="MC" style="width:100%;height:100%;object-fit:contain;border-radius:8px" onerror="this.style.display='none'">
+      <span style="display:none">MC</span>
+    </div>
+    <div>
+      <div style="font-size:16px">MielnikCasino</div>
+      <div style="font-size:12px;color:var(--muted)"></div>
+    </div>
+  </div>
+  <div style="margin-left:auto" class="balance card">
+    <div>
+      <div style="font-size:12px;color:var(--muted)">Twój balans</div>
+      <div class="num" id="balance">0</div>
+    </div>
+    <div style="margin-left:14px">
+      <button id="resetBalance" class="secondary">Resetuj do 10000</button>
+    </div>
+  </div>
+</header>
+
+<div class="container">
+  <div class="topbar">
+    <div style="color:var(--muted)">Witaj, Leon — wybierz grę i obstawiaj odpowiedzialnie.</div>
+    <div style="display:flex;gap:8px">
+      <button id="giveStarter" class="secondary" title="Ustaw balans na 10000 jeśli pusty">Daj 10000</button>
+    </div>
+  </div>
+
+  <main>
+    <section>
+      <div class="games">
+        <!-- Roulette -->
+        <div class="card">
+          <div class="game-head">
+            <h2>Ruletka</h2>
+            <div class="small">Płatności: liczba 35×, kolor 2×</div>
+          </div>
+          <div style="display:flex;gap:16px;align-items:flex-start">
+            <div class="roulette-wrap">
+              <canvas id="wheel" width="600" height="600"></canvas>
+            </div>
+            <div style="flex:1">
+              <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px">
+                <input id="betAmountR" type="number" min="1" value="100" />
+                <select id="betTypeR">
+                  <option value="color">Kolor (red/black)</option>
+                  <option value="number">Liczba (0-36)</option>
+                  <option value="parity">Parzyste/nieparzyste</option>
+                </select>
+                <input id="betExtraR" type="text" placeholder="np. red lub 17 lub even" />
+                <button id="spinBtn">Spin</button>
+              </div>
+              <div class="small">Wynik: <span id="rouletteResult">-</span></div>
+              <div style="margin-top:10px" class="log" id="rouletteLog"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Plinko -->
+        <div class="card">
+          <div class="game-head">
+            <h2>Plinko</h2>
+            <div class="small">Piłeczka spada i ląduje w slocie z mnożnikiem</div>
+          </div>
+          <div style="display:flex;gap:12px;align-items:flex-start">
+            <div style="flex:1">
+              <div class="plinko-board" id="plinkoBoard"></div>
+              <div style="display:flex;gap:8px;margin-top:10px;align-items:center">
+                <input id="betAmountP" type="number" min="1" value="200" />
+                <button id="dropPlinko">Puść piłeczkę</button>
+                <div class="small" style="margin-left:10px">Wynik: <span id="plinkoResult">-</span></div>
+              </div>
+            </div>
+            <div style="width:300px">
+              <div style="font-weight:700;margin-bottom:8px">Sloty i mnożniki</div>
+              <div style="display:flex;gap:8px;flex-wrap:wrap">
+                <div id="slotsList"></div>
+              </div>
+              <div style="margin-top:8px" class="log" id="plinkoLog"></div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <aside>
+      <div class="card">
+        <h2>Instrukcja</h2>
+        <div class="small">
+          <ul>
+            <li>Masz startowo 10 000 coins (jeśli nie był ustawiony).</li>
+            <li>Wszystkie zakłady aktualnie są lokalne i edukacyjne — nie ma płatności.</li>
+            <li>Resetuj balans do 10 000 klikając "Resetuj do 10000".</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top:14px">
+        <h2>Historia</h2>
+        <div class="log" id="globalLog">Brak akcji</div>
+      </div>
+    </aside>
+  </main>
+
+  <footer>
+    MielnikCasino — demo.
+  </footer>
+</div>
+
+<!-- BIG WIN overlay (hidden initially) -->
+<div id="bigwin" class="bigwin-overlay" style="display:none;">
+  <div class="gold-ring" aria-hidden="true"></div>
+  <div class="bigwin-card bigwin-show" id="bigwinCard" role="dialog" aria-live="polite">
+    <img id="bigwinImg" src="mielnik.png" alt="BIG WIN" />
+  </div>
+</div>
+
+<script>
+/* Core logic: balance, roulette, plinko, big-win popup
+   - put mielnik.png in same folder as this .html
+*/
+
+// helpers
+const el = id => document.getElementById(id);
+const BAL_KEY = 'mielnik_balance';
+function getBalance(){ return Number(localStorage.getItem(BAL_KEY) || 0); }
+function setBalance(v){ localStorage.setItem(BAL_KEY, Math.max(0, Math.floor(v))); el('balance').textContent = Math.round(getBalance()) + ' ⍟'; }
+function changeBalance(d){ setBalance(getBalance() + d); }
+function appendLog(targetId, text){
+  const box = el(targetId);
+  if(!box) return;
+  const time = new Date().toLocaleTimeString();
+  const line = document.createElement('div');
+  line.textContent = '['+time+'] ' + text;
+  box.prepend(line);
+  const g = el('globalLog');
+  if(g){
+    const gline = document.createElement('div');
+    gline.textContent = time + ' — ' + text;
+    g.prepend(gline);
+  }
+}
+
+// starter
+function ensureStarter(){
+  if(!localStorage.getItem(BAL_KEY)){
+    localStorage.setItem(BAL_KEY, 10000);
+    appendLog('globalLog', 'Ustawiono startowy balans 10000');
+  }
+  setBalance(getBalance());
+}
+ensureStarter();
+el('giveStarter').addEventListener('click', ()=>{
+  if(!localStorage.getItem(BAL_KEY)){
+    localStorage.setItem(BAL_KEY, 10000);
+    appendLog('globalLog','Ustawiono startowy balans 10000');
+  } else {
+    appendLog('globalLog','Balans już istnieje: '+getBalance());
+  }
+  setBalance(getBalance());
+});
+el('resetBalance').addEventListener('click', ()=>{
+  localStorage.setItem(BAL_KEY, 10000);
+  setBalance(10000);
+  appendLog('globalLog','Balans zresetowany do 10000');
+});
+
+// bet checks
+function takeBet(amount){
+  amount = Math.floor(Number(amount) || 0);
+  if(amount <= 0) return {ok:false, msg:'Nieprawidłowa kwota'};
+  if(amount > getBalance()) return {ok:false, msg:'Za mało coinów'};
+  changeBalance(-amount);
+  return {ok:true, amount:amount};
+}
+
+// ROULETTE
+const wheel = el('wheel');
+const ctx = wheel.getContext('2d');
+const wheelRadius = 280;
+const numbers = [0,32,15,19,4,21,2,25,17,34,6,27,13,36,11,30,8,23,10,5,24,16,33,1,20,14,31,9,22,18,29,7,28,12,35,3,26];
+function colorOf(n){
+  if(n===0) return '#12a4ff';
+  const redNums = new Set([1,3,5,7,9,12,14,16,18,19,21,23,25,27,30,32,34,36]);
+  return redNums.has(n) ? '#d9534f' : '#111';
+}
+function drawWheel(){
+  const cx = wheel.width/2;
+  const cy = wheel.height/2;
+  const seg = 2*Math.PI / numbers.length;
+  ctx.clearRect(0,0,wheel.width,wheel.height);
+  ctx.save();
+  ctx.translate(cx,cy);
+  for(let i=0;i<numbers.length;i++){
+    const start = i*seg;
+    ctx.beginPath();
+    ctx.moveTo(0,0);
+    ctx.arc(0,0,wheelRadius,start,start+seg);
+    ctx.closePath();
+    ctx.fillStyle = colorOf(numbers[i]);
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(0,0,0,0.6)';
+    ctx.stroke();
+    // label
+    ctx.save();
+    ctx.rotate(start + seg/2);
+    ctx.translate(wheelRadius*0.75,0);
+    ctx.rotate(Math.PI/2);
+    ctx.fillStyle = '#fff';
+    ctx.font = '14px monospace';
+    ctx.fillText(numbers[i], -10, 6);
+    ctx.restore();
+  }
+  // center
+  ctx.beginPath();
+  ctx.fillStyle = '#071019';
+  ctx.arc(0,0,60,0,Math.PI*2);
+  ctx.fill();
+  ctx.restore();
+  // pointer
+  ctx.beginPath();
+  ctx.fillStyle = '#d4d4d4';
+  ctx.moveTo(cx + wheelRadius + 6, cy);
+  ctx.lineTo(cx + wheelRadius + 36, cy-14);
+  ctx.lineTo(cx + wheelRadius + 36, cy+14);
+  ctx.closePath();
+  ctx.fill();
+}
+drawWheel();
+
+let spinning = false;
+function spinWheel(betAmount, betType, betExtra){
+  if(spinning) return;
+  const taken = takeBet(betAmount);
+  if(!taken.ok){ appendLog('rouletteLog', taken.msg); return; }
+  spinning = true;
+  appendLog('rouletteLog', 'Postawiono '+taken.amount+' ⍟ na '+betType+' "'+betExtra+'"');
+  // choose winning number
+  const winIndex = Math.floor(Math.random()*numbers.length);
+  const winNumber = numbers[winIndex];
+  // animation
+  const seg = 2*Math.PI / numbers.length;
+  const full = 3 + Math.floor(Math.random()*3);
+  const targetAngle = - (winIndex*seg) + (-Math.PI/2) + (full*2*Math.PI) + (Math.random()*seg - seg/2);
+  const duration = 3600 + Math.random()*1600; // ms
+  const startTime = performance.now();
+  function animate(t){
+    const elapsed = t - startTime;
+    const progress = Math.min(1, elapsed/duration);
+    const ease = 1 - Math.pow(1-progress,3);
+    const angle = targetAngle * ease;
+    // draw rotated wheel
+    ctx.save();
+    ctx.clearRect(0,0,wheel.width,wheel.height);
+    const cx = wheel.width/2, cy = wheel.height/2;
+    ctx.translate(cx,cy);
+    ctx.rotate(angle);
+    for(let i=0;i<numbers.length;i++){
+      const start = i*seg;
+      ctx.beginPath();
+      ctx.moveTo(0,0);
+      ctx.arc(0,0,wheelRadius,start,start+seg);
+      ctx.closePath();
+      ctx.fillStyle = colorOf(numbers[i]);
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(0,0,0,0.6)';
+      ctx.stroke();
+      ctx.save();
+      ctx.rotate(start + seg/2);
+      ctx.translate(wheelRadius*0.75,0);
+      ctx.rotate(Math.PI/2);
+      ctx.fillStyle = '#fff';
+      ctx.font = '14px monospace';
+      ctx.fillText(numbers[i], -10, 6);
+      ctx.restore();
+    }
+    ctx.beginPath();
+    ctx.fillStyle = '#071019';
+    ctx.arc(0,0,60,0,Math.PI*2);
+    ctx.fill();
+    ctx.restore();
+    // pointer
+    ctx.beginPath();
+    ctx.fillStyle = '#d4d4d4';
+    ctx.moveTo(cx + wheelRadius + 6, cy);
+    ctx.lineTo(cx + wheelRadius + 36, cy-14);
+    ctx.lineTo(cx + wheelRadius + 36, cy+14);
+    ctx.closePath();
+    ctx.fill();
+    if(progress < 1) requestAnimationFrame(animate);
+    else {
+      spinning = false;
+      handleRouletteOutcome(winNumber, taken.amount, betType, betExtra);
+    }
+  }
+  requestAnimationFrame(animate);
+}
+
+function handleRouletteOutcome(number, amount, betType, betExtra){
+  el('rouletteResult').textContent = number + ' (' + colorOf(number) + ')';
+  let win = 0;
+  betExtra = String(betExtra||'').trim().toLowerCase();
+  if(betType === 'number'){
+    if(String(number) === betExtra) win = amount * 35;
+  } else if(betType === 'color'){
+    const c = (number===0)?'green' : (colorOf(number)==='#d9534f'?'red':'black');
+    if(betExtra === 'red' && c==='red') win = amount * 2;
+    if(betExtra === 'black' && c==='black') win = amount * 2;
+  } else if(betType === 'parity'){
+    if(number !== 0){
+      const p = (number % 2 === 0) ? 'even' : 'odd';
+      if(betExtra === 'even' && p==='even') win = amount * 2;
+      if(betExtra === 'odd' && p==='odd') win = amount * 2;
+    }
+  }
+  if(win>0){
+    changeBalance(win);
+    appendLog('rouletteLog','Wygrałeś '+win+' ⍟ (liczba: '+number+')');
+    // BIG WIN on any roulette win
+    showBigWin();
+  } else {
+    appendLog('rouletteLog','Przegrałeś '+amount+' ⍟ (liczba: '+number+')');
+  }
+  setBalance(getBalance());
+}
+el('spinBtn').addEventListener('click', ()=>{
+  const amt = el('betAmountR').value;
+  const typ = el('betTypeR').value;
+  const extra = el('betExtraR').value;
+  spinWheel(amt, typ, extra);
+});
+
+// PLINKO
+const plinkoBoard = el('plinkoBoard');
+let plinkoSlots = 11;
+let plinkoMultipliers = [];
+function setupPlinko(){
+  plinkoBoard.innerHTML = '';
+  const rows = 9;
+  const boardW = plinkoBoard.clientWidth || 600;
+  for(let r=0;r<rows;r++){
+    const cols = (r%2===0)?7:6;
+    for(let c=0;c<cols;c++){
+      const peg = document.createElement('div');
+      peg.className = 'peg';
+      const left = 20 + (c*(boardW-40)/Math.max(1,cols-1));
+      const top = 20 + r*36;
+      peg.style.left = (left + (r%2?18:0)) + 'px';
+      peg.style.top = top + 'px';
+      plinkoBoard.appendChild(peg);
+    }
+  }
+
+  // multipliers (symmetric) - middle larger
+  plinkoSlots = 11;
+  plinkoMultipliers = [];
+  const base = [0.2,0.5,0.8,1,1.5,3];
+  for(let i=0;i<Math.floor(plinkoSlots/2);i++) plinkoMultipliers.push(base[Math.min(base.length-1,i)]);
+  plinkoMultipliers = plinkoMultipliers.concat([5]).concat([...plinkoMultipliers].reverse());
+
+  const slotContainer = el('slotsList');
+  slotContainer.innerHTML = '';
+  // show horizontal list under panel (panel's own bottom slots created visually)
+  for(let i=0;i<plinkoSlots;i++){
+    const s = document.createElement('div');
+    s.className = 'slot';
+    s.textContent = 'x' + plinkoMultipliers[i];
+    s.style.width = '60px';
+    s.style.height = '34px';
+    s.style.display = 'inline-flex';
+    s.style.alignItems = 'center';
+    s.style.justifyContent = 'center';
+    s.style.margin = '4px';
+    slotContainer.appendChild(s);
+
+    // visual slot inside board bottom
+    const slotV = document.createElement('div');
+    slotV.className = 'slot';
+    slotV.style.position = 'absolute';
+    slotV.style.bottom = '8px';
+    const leftPos = 20 + i*(boardW-40)/(plinkoSlots-1);
+    slotV.style.left = leftPos + 'px';
+    slotV.style.transform = 'translateX(-50%)';
+    slotV.style.width = '56px';
+    slotV.style.height = '40px';
+    slotV.style.display = 'flex';
+    slotV.style.justifyContent = 'center';
+    slotV.style.alignItems = 'center';
+    slotV.style.fontSize = '13px';
+    slotV.textContent = 'x' + plinkoMultipliers[i];
+    plinkoBoard.appendChild(slotV);
+  }
+}
+window.addEventListener('resize', ()=>{ setupPlinko(); });
+setupPlinko();
+
+function dropPlinko(){
+  const amt = el('betAmountP').value;
+  const taken = takeBet(amt);
+  if(!taken.ok){ appendLog('plinkoLog', taken.msg); return; }
+  appendLog('plinkoLog','Postawiono '+taken.amount+' ⍟ na Plinko');
+  const ball = document.createElement('div');
+  ball.className = 'ball';
+  plinkoBoard.appendChild(ball);
+  const boardRect = plinkoBoard.getBoundingClientRect();
+  let left = boardRect.width / 2;
+  let top = 10;
+  ball.style.left = left + 'px';
+  ball.style.top = top + 'px';
+
+  // random-ish walk
+  const rows = 9;
+  let positionIndex = Math.floor(plinkoSlots/2);
+  for(let r=0;r<rows;r++){
+    const step = (Math.random() < 0.5) ? -1 : 1;
+    if(positionIndex <= 1) positionIndex += 1;
+    else if(positionIndex >= plinkoSlots-2) positionIndex -= 1;
+    else positionIndex += step;
+  }
+  positionIndex = Math.max(0, Math.min(plinkoSlots-1, positionIndex));
+
+  // animate falling into slot
+  const targetLeft = 20 + positionIndex*(boardRect.width-40)/(plinkoSlots-1);
+  const targetTop = boardRect.height - 56;
+  ball.style.transition = 'left 1.2s cubic-bezier(.12,.9,.24,1), top 1.2s cubic-bezier(.12,.9,.24,1), transform 1.2s';
+  requestAnimationFrame(()=> {
+    ball.style.left = targetLeft + 'px';
+    ball.style.top = targetTop + 'px';
+    ball.style.transform = 'translateY(8px)';
+  });
+
+  setTimeout(()=>{
+    const mult = plinkoMultipliers[positionIndex];
+    const win = Math.floor(taken.amount * mult);
+    // update UI
+    el('plinkoResult').textContent = 'x' + mult;
+    if(win > 0){
+      changeBalance(win);
+      appendLog('plinkoLog','Piłeczka w slocie '+positionIndex+' — mnożnik x'+mult+' → wygrana '+win+' ⍟');
+      // if multiplier is ~1.5 (tolerance), show big win
+      if(Math.abs(mult - 1.5) < 0.0001){
+        showBigWin();
+      }
+    } else {
+      appendLog('plinkoLog','Piłeczka w slocie '+positionIndex+' — brak wygranej');
+    }
+    setBalance(getBalance());
+    ball.remove();
+  }, 1400);
+}
+el('dropPlinko').addEventListener('click', dropPlinko);
+
+// BIG WIN popup implementation
+let bigWinTimeout = null;
+function showBigWin(){
+  const overlay = el('bigwin');
+  if(!overlay) return;
+  // restart animation
+  overlay.style.display = 'flex';
+  const card = el('bigwinCard');
+  // reset reflow to retrigger animation
+  card.classList.remove('bigwin-show');
+  // small randomness for visual pop
+  void card.offsetWidth;
+  card.classList.add('bigwin-show');
+
+  // ensure visible for ~2.2s
+  if(bigWinTimeout) clearTimeout(bigWinTimeout);
+  bigWinTimeout = setTimeout(()=> {
+    overlay.style.display = 'none';
+  }, 2200);
+}
+
+// prevent negative numbers on inputs
+document.querySelectorAll('input[type=number]').forEach(inp=>{
+  inp.addEventListener('input', ()=> {
+    if(inp.value < 1) inp.value = 1;
+  });
+});
+
+// initial UI balance display
+setBalance(getBalance());
+appendLog('globalLog','Strona załadowana. Balans: '+getBalance()+' ⍟');
+
+</script>
+</body>
+</html>
