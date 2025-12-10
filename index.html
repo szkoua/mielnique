@@ -140,7 +140,7 @@
 
 <div class="container">
   <div class="topbar">
-    <div style="color:var(--muted)">Witaj, Graczu — wybierz grę i obstawiaj odpowiedzialnie.</div>
+    <div style="color:var(--muted)">Witaj, Leon — wybierz grę i obstawiaj odpowiedzialnie.</div>
     <div style="display:flex;gap:8px">
       <button id="giveStarter" class="secondary" title="Ustaw balans na 10000 jeśli pusty">Daj 10000</button>
     </div>
@@ -237,9 +237,7 @@
 </div>
 
 <script>
-/* Core logic: balance, roulette, plinko, big-win popup
-   - put mielnik.png in same folder as this .html
-*/
+/* Core logic: balance, roulette, plinko, big-win popup */
 
 // helpers
 const el = id => document.getElementById(id);
@@ -300,11 +298,13 @@ const wheel = el('wheel');
 const ctx = wheel.getContext('2d');
 const wheelRadius = 280;
 const numbers = [0,32,15,19,4,21,2,25,17,34,6,27,13,36,11,30,8,23,10,5,24,16,33,1,20,14,31,9,22,18,29,7,28,12,35,3,26];
+
 function colorOf(n){
   if(n===0) return '#12a4ff';
   const redNums = new Set([1,3,5,7,9,12,14,16,18,19,21,23,25,27,30,32,34,36]);
   return redNums.has(n) ? '#d9534f' : '#111';
 }
+
 function drawWheel(){
   const cx = wheel.width/2;
   const cy = wheel.height/2;
@@ -322,7 +322,6 @@ function drawWheel(){
     ctx.fill();
     ctx.strokeStyle = 'rgba(0,0,0,0.6)';
     ctx.stroke();
-    // label
     ctx.save();
     ctx.rotate(start + seg/2);
     ctx.translate(wheelRadius*0.75,0);
@@ -332,13 +331,11 @@ function drawWheel(){
     ctx.fillText(numbers[i], -10, 6);
     ctx.restore();
   }
-  // center
   ctx.beginPath();
   ctx.fillStyle = '#071019';
   ctx.arc(0,0,60,0,Math.PI*2);
   ctx.fill();
   ctx.restore();
-  // pointer
   ctx.beginPath();
   ctx.fillStyle = '#d4d4d4';
   ctx.moveTo(cx + wheelRadius + 6, cy);
@@ -349,6 +346,9 @@ function drawWheel(){
 }
 drawWheel();
 
+// audio
+const spinSound = new Audio('sound.mp3');
+
 let spinning = false;
 function spinWheel(betAmount, betType, betExtra){
   if(spinning) return;
@@ -356,21 +356,28 @@ function spinWheel(betAmount, betType, betExtra){
   if(!taken.ok){ appendLog('rouletteLog', taken.msg); return; }
   spinning = true;
   appendLog('rouletteLog', 'Postawiono '+taken.amount+' ⍟ na '+betType+' "'+betExtra+'"');
-  // choose winning number
+
+  // play sound
+  spinSound.currentTime = 0;
+  spinSound.play();
+
+  // pick winning number
   const winIndex = Math.floor(Math.random()*numbers.length);
   const winNumber = numbers[winIndex];
-  // animation
+
   const seg = 2*Math.PI / numbers.length;
-  const full = 3 + Math.floor(Math.random()*3);
-  const targetAngle = - (winIndex*seg) + (-Math.PI/2) + (full*2*Math.PI) + (Math.random()*seg - seg/2);
-  const duration = 3600 + Math.random()*1600; // ms
+  const full = 5; // full rotations
+  const targetAngle = - (winIndex*seg) + (-Math.PI/2) + (full*2*Math.PI);
+
+  const duration = 7000; // 7 seconds
   const startTime = performance.now();
+
   function animate(t){
     const elapsed = t - startTime;
     const progress = Math.min(1, elapsed/duration);
-    const ease = 1 - Math.pow(1-progress,3);
+    const ease = 1 - Math.pow(1-progress,3); // cubic out easing
     const angle = targetAngle * ease;
-    // draw rotated wheel
+
     ctx.save();
     ctx.clearRect(0,0,wheel.width,wheel.height);
     const cx = wheel.width/2, cy = wheel.height/2;
@@ -400,7 +407,7 @@ function spinWheel(betAmount, betType, betExtra){
     ctx.arc(0,0,60,0,Math.PI*2);
     ctx.fill();
     ctx.restore();
-    // pointer
+
     ctx.beginPath();
     ctx.fillStyle = '#d4d4d4';
     ctx.moveTo(cx + wheelRadius + 6, cy);
@@ -408,12 +415,14 @@ function spinWheel(betAmount, betType, betExtra){
     ctx.lineTo(cx + wheelRadius + 36, cy+14);
     ctx.closePath();
     ctx.fill();
+
     if(progress < 1) requestAnimationFrame(animate);
     else {
       spinning = false;
       handleRouletteOutcome(winNumber, taken.amount, betType, betExtra);
     }
   }
+
   requestAnimationFrame(animate);
 }
 
@@ -437,13 +446,13 @@ function handleRouletteOutcome(number, amount, betType, betExtra){
   if(win>0){
     changeBalance(win);
     appendLog('rouletteLog','Wygrałeś '+win+' ⍟ (liczba: '+number+')');
-    // BIG WIN on any roulette win
     showBigWin();
   } else {
     appendLog('rouletteLog','Przegrałeś '+amount+' ⍟ (liczba: '+number+')');
   }
   setBalance(getBalance());
 }
+
 el('spinBtn').addEventListener('click', ()=>{
   const amt = el('betAmountR').value;
   const typ = el('betTypeR').value;
@@ -472,7 +481,6 @@ function setupPlinko(){
     }
   }
 
-  // multipliers (symmetric) - middle larger
   plinkoSlots = 11;
   plinkoMultipliers = [];
   const base = [0.2,0.5,0.8,1,1.5,3];
@@ -481,7 +489,6 @@ function setupPlinko(){
 
   const slotContainer = el('slotsList');
   slotContainer.innerHTML = '';
-  // show horizontal list under panel (panel's own bottom slots created visually)
   for(let i=0;i<plinkoSlots;i++){
     const s = document.createElement('div');
     s.className = 'slot';
@@ -494,7 +501,6 @@ function setupPlinko(){
     s.style.margin = '4px';
     slotContainer.appendChild(s);
 
-    // visual slot inside board bottom
     const slotV = document.createElement('div');
     slotV.className = 'slot';
     slotV.style.position = 'absolute';
@@ -529,7 +535,6 @@ function dropPlinko(){
   ball.style.left = left + 'px';
   ball.style.top = top + 'px';
 
-  // random-ish walk
   const rows = 9;
   let positionIndex = Math.floor(plinkoSlots/2);
   for(let r=0;r<rows;r++){
@@ -540,7 +545,6 @@ function dropPlinko(){
   }
   positionIndex = Math.max(0, Math.min(plinkoSlots-1, positionIndex));
 
-  // animate falling into slot
   const targetLeft = 20 + positionIndex*(boardRect.width-40)/(plinkoSlots-1);
   const targetTop = boardRect.height - 56;
   ball.style.transition = 'left 1.2s cubic-bezier(.12,.9,.24,1), top 1.2s cubic-bezier(.12,.9,.24,1), transform 1.2s';
@@ -553,12 +557,10 @@ function dropPlinko(){
   setTimeout(()=>{
     const mult = plinkoMultipliers[positionIndex];
     const win = Math.floor(taken.amount * mult);
-    // update UI
     el('plinkoResult').textContent = 'x' + mult;
     if(win > 0){
       changeBalance(win);
       appendLog('plinkoLog','Piłeczka w slocie '+positionIndex+' — mnożnik x'+mult+' → wygrana '+win+' ⍟');
-      // if multiplier is ~1.5 (tolerance), show big win
       if(Math.abs(mult - 1.5) < 0.0001){
         showBigWin();
       }
@@ -571,39 +573,32 @@ function dropPlinko(){
 }
 el('dropPlinko').addEventListener('click', dropPlinko);
 
-// BIG WIN popup implementation
+// BIG WIN popup
 let bigWinTimeout = null;
 function showBigWin(){
   const overlay = el('bigwin');
   if(!overlay) return;
-  // restart animation
   overlay.style.display = 'flex';
   const card = el('bigwinCard');
-  // reset reflow to retrigger animation
   card.classList.remove('bigwin-show');
-  // small randomness for visual pop
   void card.offsetWidth;
   card.classList.add('bigwin-show');
 
-  // ensure visible for ~2.2s
   if(bigWinTimeout) clearTimeout(bigWinTimeout);
   bigWinTimeout = setTimeout(()=> {
     overlay.style.display = 'none';
   }, 2200);
 }
 
-// prevent negative numbers on inputs
+// prevent negative numbers
 document.querySelectorAll('input[type=number]').forEach(inp=>{
-  inp.addEventListener('input', ()=> {
-    if(inp.value < 1) inp.value = 1;
-  });
+  inp.addEventListener('input', ()=> { if(inp.value < 1) inp.value = 1; });
 });
 
-// initial UI balance display
+// initial UI
 setBalance(getBalance());
 appendLog('globalLog','Strona załadowana. Balans: '+getBalance()+' ⍟');
-
 </script>
+
 </body>
 </html>
-
